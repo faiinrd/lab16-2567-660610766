@@ -5,6 +5,7 @@ import {
   zStudentPutBody,
 } from "@lib/schema";
 import { NextRequest, NextResponse } from "next/server";
+import { zStudentDeleteBody } from "@lib/schema";
 
 export const GET = async (request: NextRequest) => {
   const program = request.nextUrl.searchParams.get("program");
@@ -31,6 +32,9 @@ export const GET = async (request: NextRequest) => {
   }
 
   //filter by student id here
+  if(studentId !== null){
+    filtered = filtered.filter((std) => std.studentId === studentId);
+  }
 
   return NextResponse.json({ ok: true, students: filtered });
 };
@@ -49,7 +53,7 @@ export const POST = async (request: NextRequest) => {
     );
   }
 
-  //check duplicate student id
+
   const foundDupe = DB.students.find((std) => std.studentId === body.studentId);
   if (foundDupe) {
     return NextResponse.json(
@@ -98,18 +102,39 @@ export const PUT = async (request: NextRequest) => {
 
 export const DELETE = async (request: NextRequest) => {
   //get body and validate it
+  const body = await request.json();
+
+  const parseResult = zStudentDeleteBody.safeParse(body);
+  if(parseResult.success === false){
+      return NextResponse.json({
+          ok: false,
+          massage: parseResult.error.issues[0].message,
+      },{
+          status: 400,
+      });
+  }
 
   //check if student id exist
+  const foundId = DB.students.findIndex( student => student.studentId === body.studentId)
+
+  if(foundId === -1){
+      return NextResponse.json({
+          ok: false,
+          message: "Student ID does not exist",
+      },{
+          status: 404,
+      });
+  }
 
   //perform removing student from DB. You can choose from 2 choices
   //1. use array filter method
-  // DB.students = DB.students.filter(...);
+  DB.students = DB.students.filter((std) => std.studentId !== body.studentId);
 
   //or 2. use splice array method
   // DB.students.splice(...)
 
   return NextResponse.json({
     ok: true,
-    message: `Student Id xxx has been deleted`,
+    message: `Student Id ${body.studentId} has been deleted`,
   });
 };
